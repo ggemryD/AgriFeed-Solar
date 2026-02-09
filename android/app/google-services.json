@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "846514598608",
+    "project_id": "solar-smart-pig-feeder",
+    "storage_bucket": "solar-smart-pig-feeder.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:846514598608:android:c5f1c32223aace317ce4d5",
+        "android_client_info": {
+          "package_name": "com.example.smart_solar_pig_feeder"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "846514598608-g085u9jvkpe71up3n7khsvqpibraqogl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.smart_solar_pig_feeder",
+            "certificate_hash": "37102e1c0e6dbf23d792b43c1f7973289f9836c1"
+          }
+        },
+        {
+          "client_id": "846514598608-i6t7ddk3sqmlv7h2bv96or59bq9aqpfq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBB2TuTdXMTtjDPji8s9h4oHocFxZj8ato"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "846514598608-i6t7ddk3sqmlv7h2bv96or59bq9aqpfq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
