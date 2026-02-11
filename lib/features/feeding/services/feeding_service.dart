@@ -53,6 +53,9 @@ class FeedingService {
   }
 
   Future<void> triggerManualFeed(double weightKg) async {
+    final user = _requireUser();
+    
+    // Store feeding log for history
     final feedData = {
       'type': 'manual',
       'weightKg': weightKg,
@@ -61,34 +64,86 @@ class FeedingService {
     };
 
     await _firebaseService.databaseRef
+        .child('users')
+        .child(user.uid)
         .child('feeding')
         .child('manualFeeds')
         .push()
         .set(feedData);
-  }
 
-  Stream<double?> getLoadCellData() {
-    return _firebaseService.databaseRef
+    // Set target weight for ESP32 and trigger feeding
+    await _firebaseService.databaseRef
+        .child('users')
+        .child(user.uid)
         .child('devices')
-        .child('loadCell')
-        .child('weight')
-        .onValue
-        .map((event) {
-      if (event.snapshot.value != null) {
-        return (event.snapshot.value as num).toDouble();
-      }
-      return null;
+        .child('mainStorage')
+        .update({
+      'targetWeight': weightKg,
+      'feedCommand': 'FEED', // ESP32 expects "FEED" not "OPEN"
     });
   }
 
+  Stream<double?> getLoadCellData() {
+    final user = _requireUser();
+    return _firebaseService.databaseRef
+        .child('users')
+        .child(user.uid)
+        .child('devices')
+        .child('mainStorage')
+        .child('currentWeight') // ESP32 writes to currentWeight, not loadCell/weight
+        .onValue
+        .map((event) {
+          final value = event.snapshot.value;
+          if (value == null) return null;
+          if (value is num) return value.toDouble();
+          if (value is String) return double.tryParse(value);
+          return null;
+        });
+  }
+
   Future<void> updateLoadCellWeight(double weight) async {
+    final user = _requireUser();
     await _firebaseService.databaseRef
+        .child('users')
+        .child(user.uid)
         .child('devices')
         .child('loadCell')
         .update({
       'weight': weight,
       'lastUpdated': DateTime.now().toIso8601String(),
     });
+  }
+
+  // Get feeding status from ESP32
+  Stream<String?> getFeedingStatus() {
+    final user = _requireUser();
+    return _firebaseService.databaseRef
+        .child('users')
+        .child(user.uid)
+        .child('devices')
+        .child('mainStorage')
+        .child('feedingStatus')
+        .onValue
+        .map((event) => event.snapshot.value?.toString());
+  }
+
+  // Get target weight from ESP32
+  Stream<double?> getTargetWeight() {
+    final user = _requireUser();
+    return _firebaseService.databaseRef
+        .child('users')
+        .child(user.uid)
+        .child('devices')
+        .child('mainStorage')
+        .child('targetWeight')
+        .onValue
+        .map((event) {
+          final value = event.snapshot.value;
+          if (value == null) return null;
+          if (value is num) return value.toDouble();
+          if (value is String) return double.tryParse(value);
+          return null;
+        });
   }
 
   DatabaseReference _userSchedulesRef() {

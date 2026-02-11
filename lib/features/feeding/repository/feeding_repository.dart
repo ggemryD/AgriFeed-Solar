@@ -85,6 +85,15 @@ class FeedingRepository {
     await _feedingService.deleteSchedule(scheduleId);
   }
 
+  // ESP32 synchronization methods
+  Stream<String?> getFeedingStatus() {
+    return _feedingService.getFeedingStatus();
+  }
+
+  Stream<double?> getTargetWeight() {
+    return _feedingService.getTargetWeight();
+  }
+
   (int, int) _resolveTime(int? hour, int? minute, String? label) {
     if (hour != null && minute != null) {
       return (hour, minute);

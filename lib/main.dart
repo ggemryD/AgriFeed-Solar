@@ -201,24 +201,12 @@ class AgriFeedSolarApp extends StatelessWidget {
           create: (context) =>
               DashboardService(context.read<FirebaseService>()),
         ),
-        Provider<DashboardRepository>(
-          create: (context) =>
-              DashboardRepository(context.read<DashboardService>()),
-        ),
-        ChangeNotifierProvider(
-          create: (context) =>
-              DashboardViewModel(context.read<DashboardRepository>()),
-        ),
         Provider<FeedingService>(
           create: (context) => FeedingService(context.read<FirebaseService>()),
         ),
         Provider<FeedingRepository>(
           create: (context) =>
               FeedingRepository(context.read<FeedingService>()),
-        ),
-        ChangeNotifierProvider(
-          create: (context) =>
-              FeedingViewModel(context.read<FeedingRepository>()),
         ),
         Provider<AlertsService>(
           create: (context) => AlertsService(context.read<FirebaseService>()),
@@ -227,9 +215,29 @@ class AgriFeedSolarApp extends StatelessWidget {
           create: (context) =>
               AlertsRepository(context.read<AlertsService>()),
         ),
+        ProxyProvider3<DashboardService, FeedingRepository, AlertsRepository,
+            DashboardRepository>(
+          update: (context, dashboardService, feedingRepo, alertsRepo, _) =>
+              DashboardRepository(
+            dashboardService,
+            feedingRepository: feedingRepo,
+            alertsRepository: alertsRepo,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              DashboardViewModel(context.read<DashboardRepository>()),
+        ),
         ChangeNotifierProvider(
           create: (context) =>
               AlertsViewModel(context.read<AlertsRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              FeedingViewModel(
+                context.read<FeedingRepository>(),
+                context.read<AlertsViewModel>(),
+              ),
         ),
         Provider<WiFiService>(
           create: (context) => WiFiService(),
@@ -250,6 +258,7 @@ class AgriFeedSolarApp extends StatelessWidget {
           '/dashboard': (context) => const AppShell(initialIndex: 0),
           '/feeding': (context) => const AppShell(initialIndex: 1),
           '/alerts': (context) => const AppShell(initialIndex: 2),
+          '/profile': (context) => const AppShell(initialIndex: 3),
         },
       ),
     );
@@ -304,7 +313,7 @@ class _AppShellState extends State<AppShell> {
   static const List<String> _titles = [
     'Dashboard',
     'Feeding Control',
-    'Alerts & Logs',
+    'History & Logs', //Alerts & Logs
     'Profile',
   ];
 

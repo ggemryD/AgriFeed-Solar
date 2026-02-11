@@ -22,6 +22,19 @@ class AlertsRepository {
     return result;
   }
 
+  // New: Create feeding log when dispense is triggered
+  Future<void> createFeedingLog({
+    required AlertType type,
+    required double weightKg,
+    required String feedType,
+  }) async {
+    await _alertsService.createFeedingLog(
+      type: type,
+      weightKg: weightKg,
+      feedType: feedType,
+    );
+  }
+
   Stream<AlertItem> subscribeAlerts() {
     return getAlerts().map((alerts) => alerts.isNotEmpty ? alerts.first : 
       AlertItem(

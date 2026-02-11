@@ -64,14 +64,14 @@ class _AlertsViewState extends State<AlertsView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'System Alerts & Logs',
+            'Feeding History & Logs',
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Monitor feed status alerts, ATS switching, and GSM notifications.',
+            'View all manual and scheduled feeding activities with timestamps and quantities.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: Colors.grey[600],
             ),
@@ -92,7 +92,7 @@ class _AlertsViewState extends State<AlertsView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Unable to fetch alerts',
+                            'Unable to fetch feeding logs',
                             style: theme.textTheme.titleMedium,
                           ),
                           const SizedBox(height: 6),
@@ -132,6 +132,7 @@ class _AlertTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isUnread = !alert.isRead;
+    final isFeedingLog = alert.type == AlertType.manualFeed || alert.type == AlertType.scheduledFeed;
 
     return Dismissible(
       key: ValueKey(alert.id),
@@ -200,6 +201,40 @@ class _AlertTile extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
+            // Show feeding weight and type for feeding logs
+            if (isFeedingLog && (alert.feedWeight != null || alert.feedType != null)) ...[
+              Row(
+                children: [
+                  Icon(
+                    Icons.scale_outlined,
+                    size: 16,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  if (alert.feedWeight != null)
+                    Text(
+                      '${alert.feedWeight!.toStringAsFixed(1)} kg',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  if (alert.feedWeight != null && alert.feedType != null)
+                    const SizedBox(width: 8),
+                  if (alert.feedType != null)
+                    Chip(
+                      label: Text(alert.feedType!),
+                      backgroundColor: colorScheme.primary.withValues(alpha: 0.12),
+                      labelStyle: TextStyle(
+                        color: colorScheme.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
             Text(alert.message, style: theme.textTheme.bodyMedium),
             if (alert.statusDetail != null) ...[
               const SizedBox(height: 10),
@@ -262,6 +297,14 @@ class _AlertIcon extends StatelessWidget {
       case AlertType.smsStatus:
         icon = Icons.sms_outlined;
         color = colorScheme.primary;
+        break;
+      case AlertType.manualFeed:
+        icon = Icons.touch_app_outlined;
+        color = Colors.purple;
+        break;
+      case AlertType.scheduledFeed:
+        icon = Icons.schedule_outlined;
+        color = Colors.teal;
         break;
     }
 

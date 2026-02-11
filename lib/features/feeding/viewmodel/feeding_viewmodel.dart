@@ -4,23 +4,29 @@ import 'package:flutter/foundation.dart';
 
 import '../model/feeding_schedule_model.dart';
 import '../repository/feeding_repository.dart';
+import '../../alerts/viewmodel/alerts_viewmodel.dart'; // Import alerts viewmodel
+import '../../alerts/model/alert_item.dart'; // Import AlertType
 
 class FeedingViewModel extends ChangeNotifier {
-  FeedingViewModel(this._repository) {
+  FeedingViewModel(this._repository, [this._alertsViewModel]) {
     _init();
   }
 
   final FeedingRepository _repository;
+  final AlertsViewModel? _alertsViewModel; // Optional alerts viewmodel
 
-  List<FeedingScheduleModel> _schedules = const [];
-  double _manualQuantity = 2.5;
-  bool _isLoading = true;
+  List<FeedingScheduleModel> _schedules = [];
+  double _manualQuantity = 2.0;
+  bool _isLoading = false;
   bool _isDispensing = false;
   double? _loadCellKg;
   Object? _error;
-
-  StreamSubscription<List<FeedingScheduleModel>>? _schedulesSub;
-  StreamSubscription<double?>? _loadSub;
+  
+  // ESP32 synchronization state
+  String? _feedingStatus;
+  double? _targetWeight;
+  StreamSubscription<String?>? _feedingStatusSub;
+  StreamSubscription<double?>? _targetWeightSub;
 
   List<FeedingScheduleModel> get schedules => _schedules;
   double get manualQuantity => _manualQuantity;
@@ -29,10 +35,22 @@ class FeedingViewModel extends ChangeNotifier {
   double? get loadCellKg => _loadCellKg;
   Object? get error => _error;
   bool get hasError => _error != null;
+  
+  // ESP32 sync getters
+  String? get feedingStatus => _feedingStatus;
+  double? get targetWeight => _targetWeight;
+  bool get isFeedingActive => _feedingStatus != null && 
+      _feedingStatus != 'IDLE' && 
+      _feedingStatus != 'COMPLETE';
+
+  StreamSubscription<List<FeedingScheduleModel>>? _schedulesSub;
+  StreamSubscription<double?>? _loadSub;
 
   Future<void> _init() async {
     await _fetchData();
     _subscribeToLoadCell();
+    _subscribeToFeedingStatus();
+    _subscribeToTargetWeight();
   }
 
   Future<void> _fetchData() async {
@@ -73,6 +91,16 @@ class FeedingViewModel extends ChangeNotifier {
     try {
       await _repository.triggerManualFeed(_manualQuantity);
       _error = null;
+      
+      // Create feeding log in alerts
+      if (_alertsViewModel != null) {
+        await _alertsViewModel!.createFeedingLog(
+          type: AlertType.manualFeed,
+          weightKg: _manualQuantity,
+          feedType: 'Manual',
+        );
+      }
+      
       notifyListeners();
       return true;
     } catch (err) {
@@ -158,6 +186,22 @@ class FeedingViewModel extends ChangeNotifier {
     });
   }
 
+  void _subscribeToFeedingStatus() {
+    _feedingStatusSub?.cancel();
+    _feedingStatusSub = _repository.getFeedingStatus().listen((status) {
+      _feedingStatus = status;
+      notifyListeners();
+    });
+  }
+
+  void _subscribeToTargetWeight() {
+    _targetWeightSub?.cancel();
+    _targetWeightSub = _repository.getTargetWeight().listen((weight) {
+      _targetWeight = weight;
+      notifyListeners();
+    });
+  }
+
   void _setLoading(bool value) {
     if (_isLoading != value) {
       _isLoading = value;
@@ -169,6 +213,8 @@ class FeedingViewModel extends ChangeNotifier {
   void dispose() {
     _schedulesSub?.cancel();
     _loadSub?.cancel();
+    _feedingStatusSub?.cancel();
+    _targetWeightSub?.cancel();
     super.dispose();
   }
 }

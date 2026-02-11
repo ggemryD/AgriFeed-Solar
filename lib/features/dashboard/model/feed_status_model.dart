@@ -60,4 +60,24 @@ class FeedStatusModel {
     }
     return '${(fillPercentage * 100).toStringAsFixed(0)}%';
   }
+
+  FeedStatusModel copyWith({
+    double? currentWeightKg,
+    double? capacityKg,
+    double? lowFeedThresholdKg,
+    DateTime? lastFeedingTime,
+    DateTime? nextFeedingTime,
+    int? feedLevel,
+    String? storageStatus,
+  }) {
+    return FeedStatusModel(
+      currentWeightKg: currentWeightKg ?? this.currentWeightKg,
+      capacityKg: capacityKg ?? this.capacityKg,
+      lowFeedThresholdKg: lowFeedThresholdKg ?? this.lowFeedThresholdKg,
+      lastFeedingTime: lastFeedingTime ?? this.lastFeedingTime,
+      nextFeedingTime: nextFeedingTime ?? this.nextFeedingTime,
+      feedLevel: feedLevel ?? this.feedLevel,
+      storageStatus: storageStatus ?? this.storageStatus,
+    );
+  }
 }

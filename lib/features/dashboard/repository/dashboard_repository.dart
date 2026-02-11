@@ -1,157 +1,27 @@
-// import 'dart:async';
-
-// import '../model/feed_status_model.dart';
-// import '../model/power_status_model.dart';
-// import '../services/dashboard_service.dart';
-
-// class DashboardRepository {
-//   final DashboardService _dashboardService;
-
-//   DashboardRepository(this._dashboardService);
-
-//   Stream<FeedStatusModel?> subscribeFeedStatus() {
-//     return _dashboardService.getFeedStatus().map((data) {
-//       if (data == null) return null;
-      
-//       return FeedStatusModel(
-//         currentWeightKg: (data['currentWeightKg'] as num?)?.toDouble() ?? 0.0,
-//         capacityKg: (data['capacityKg'] as num?)?.toDouble() ?? 80.0,
-//         lowFeedThresholdKg: (data['lowFeedThresholdKg'] as num?)?.toDouble() ?? 20.0,
-//         lastFeedingTime: data['lastFeedingTime'] != null
-//             ? DateTime.parse(data['lastFeedingTime'])
-//             : null,
-//         nextFeedingTime: data['nextFeedingTime'] != null
-//             ? DateTime.parse(data['nextFeedingTime'])
-//             : null,
-//       );
-//     });
-//   }
-
-//   Stream<PowerStatusModel?> subscribePowerStatus() {
-//     return _dashboardService.getPowerStatus().map((data) {
-//       if (data == null) return null;
-      
-//       return PowerStatusModel(
-//         batteryPercentage: (data['batteryPercentage'] as int?) ?? 0,
-//         isSolarCharging: (data['isSolarCharging'] as bool?) ?? false,
-//         isGridCharging: (data['isGridCharging'] as bool?) ?? false,
-//         isOnline: (data['isOnline'] as bool?) ?? false,
-//         motorActive: (data['motorActive'] as bool?) ?? false,
-//       );
-//     });
-//   }
-
-//   Future<FeedStatusModel?> getFeedStatus() async {
-//     final stream = subscribeFeedStatus();
-//     FeedStatusModel? result;
-//     await for (final value in stream) {
-//       result = value;
-//       break;
-//     }
-//     return result;
-//   }
-
-//   Future<PowerStatusModel?> getPowerStatus() async {
-//     final stream = subscribePowerStatus();
-//     PowerStatusModel? result;
-//     await for (final value in stream) {
-//       result = value;
-//       break;
-//     }
-//     return result;
-//   }
-// }
-
-//------------------------------------------
-
-// import 'dart:async';
-
-// import '../model/feed_status_model.dart';
-// import '../model/power_status_model.dart';
-// import '../services/dashboard_service.dart';
-
-// class DashboardRepository {
-//   final DashboardService _dashboardService;
-
-//   DashboardRepository(this._dashboardService);
-
-//   Stream<FeedStatusModel?> subscribeFeedStatus() {
-//     // Combine both feedStatus and mainStorage streams
-//     return _dashboardService.getFeedStatus().asyncMap((feedData) async {
-//       // Get mainStorage data
-//       Map<String, dynamic>? storageData;
-//       await for (final data in _dashboardService.getMainStorageStatus()) {
-//         storageData = data;
-//         break; // Get first value
-//       }
-
-//       if (feedData == null && storageData == null) return null;
-
-//       return FeedStatusModel(
-//         currentWeightKg: (feedData?['currentWeightKg'] as num?)?.toDouble() ?? 0.0,
-//         capacityKg: (feedData?['capacityKg'] as num?)?.toDouble() ?? 80.0,
-//         lowFeedThresholdKg: (feedData?['lowFeedThresholdKg'] as num?)?.toDouble() ?? 20.0,
-//         lastFeedingTime: feedData?['lastFeedingTime'] != null
-//             ? DateTime.parse(feedData!['lastFeedingTime'])
-//             : null,
-//         nextFeedingTime: feedData?['nextFeedingTime'] != null
-//             ? DateTime.parse(feedData!['nextFeedingTime'])
-//             : null,
-//         // ESP32 mainStorage data
-//         feedLevel: storageData?['feedLevel'] as int?,
-//         storageStatus: storageData?['status'] as String?,
-//       );
-//     });
-//   }
-
-//   Stream<PowerStatusModel?> subscribePowerStatus() {
-//     return _dashboardService.getPowerStatus().map((data) {
-//       if (data == null) return null;
-      
-//       return PowerStatusModel(
-//         batteryPercentage: (data['batteryPercentage'] as int?) ?? 0,
-//         isSolarCharging: (data['isSolarCharging'] as bool?) ?? false,
-//         isGridCharging: (data['isGridCharging'] as bool?) ?? false,
-//         isOnline: (data['isOnline'] as bool?) ?? false,
-//         motorActive: (data['motorActive'] as bool?) ?? false,
-//       );
-//     });
-//   }
-
-//   Future<FeedStatusModel?> getFeedStatus() async {
-//     final stream = subscribeFeedStatus();
-//     FeedStatusModel? result;
-//     await for (final value in stream) {
-//       result = value;
-//       break;
-//     }
-//     return result;
-//   }
-
-//   Future<PowerStatusModel?> getPowerStatus() async {
-//     final stream = subscribePowerStatus();
-//     PowerStatusModel? result;
-//     await for (final value in stream) {
-//       result = value;
-//       break;
-//     }
-//     return result;
-//   }
-// }
-
 import 'dart:async';
 
 import '../model/feed_status_model.dart';
 import '../model/power_status_model.dart';
 import '../services/dashboard_service.dart';
 
+import '../../feeding/repository/feeding_repository.dart';
+import '../../feeding/model/feeding_schedule_model.dart';
+import '../../alerts/repository/alerts_repository.dart';
+import '../../alerts/model/alert_item.dart';
+
 class DashboardRepository {
   final DashboardService _dashboardService;
+  final FeedingRepository feedingRepository;
+  final AlertsRepository alertsRepository;
 
-  DashboardRepository(this._dashboardService);
+  DashboardRepository(
+    this._dashboardService, {
+    required this.feedingRepository,
+    required this.alertsRepository,
+  });
 
   Stream<FeedStatusModel?> subscribeFeedStatus() {
-    return _dashboardService.getMainStorageStatus().map((storageData) {
+    return _dashboardService.getMainStorageStatus().asyncMap((storageData) async {
       print('📊 Storage Data: $storageData');
       
       if (storageData == null) {
@@ -159,17 +29,89 @@ class DashboardRepository {
         return null;
       }
 
+      // 1. Try to get times from Firebase storageData first
+      DateTime? lastFeeding = storageData['lastFeedingTime'] != null
+          ? DateTime.tryParse(storageData['lastFeedingTime'].toString())
+          : null;
+          
+      DateTime? nextFeeding = storageData['nextFeedingTime'] != null
+          ? DateTime.tryParse(storageData['nextFeedingTime'].toString())
+          : null;
+
+      // 2. Fallback: Fetch from AlertsRepository (History) if missing
+      if (lastFeeding == null) {
+        try {
+          final alertsStream = alertsRepository.getAlerts();
+          await for (final alerts in alertsStream) {
+            final feedingLogs = alerts.where((a) => 
+              a.type == AlertType.manualFeed || 
+              a.type == AlertType.scheduledFeed
+            ).toList();
+            
+            if (feedingLogs.isNotEmpty) {
+              feedingLogs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+              lastFeeding = feedingLogs.first.timestamp;
+            }
+            break; // Get one snapshot
+          }
+        } catch (e) {
+          print('Error fetching last feeding from alerts: $e');
+        }
+      }
+
+      // 3. Fallback: Calculate from FeedingRepository (Schedules) if missing
+      if (nextFeeding == null) {
+        try {
+          final schedulesStream = feedingRepository.getSchedules();
+          await for (final schedules in schedulesStream) {
+            nextFeeding = _calculateNextFeeding(schedules);
+            break; // Get one snapshot
+          }
+        } catch (e) {
+          print('Error calculating next feeding: $e');
+        }
+      }
+
       // Use mainStorage data directly
       return FeedStatusModel(
         currentWeightKg: 0.0,  // Not used when feedLevel is available
         capacityKg: 100.0,
         lowFeedThresholdKg: 20.0,
-        lastFeedingTime: null,  // Add these fields to Firebase if needed
-        nextFeedingTime: null,
+        lastFeedingTime: lastFeeding,
+        nextFeedingTime: nextFeeding,
         feedLevel: storageData['feedLevel'] as int?,
         storageStatus: storageData['status'] as String?,
       );
     });
+  }
+
+  DateTime? _calculateNextFeeding(List<FeedingScheduleModel> schedules) {
+    if (schedules.isEmpty) return null;
+    final now = DateTime.now();
+    
+    // Sort schedules by time
+    final sorted = List<FeedingScheduleModel>.from(schedules)
+      ..sort((a, b) {
+        if (a.hour != b.hour) return a.hour.compareTo(b.hour);
+        return a.minute.compareTo(b.minute);
+      });
+      
+    // Find next schedule today
+    for (final schedule in sorted) {
+      if (!schedule.isEnabled) continue;
+      final scheduleTime = DateTime(now.year, now.month, now.day, schedule.hour, schedule.minute);
+      if (scheduleTime.isAfter(now)) {
+        return scheduleTime;
+      }
+    }
+    
+    // Find first schedule tomorrow
+    for (final schedule in sorted) {
+       if (!schedule.isEnabled) continue;
+       return DateTime(now.year, now.month, now.day + 1, schedule.hour, schedule.minute);
+    }
+    
+    return null;
   }
 
   Stream<PowerStatusModel?> subscribePowerStatus() {
@@ -237,5 +179,4 @@ class DashboardRepository {
       rethrow;
     }
   }
-  // END OF TESTING METHOD
 }

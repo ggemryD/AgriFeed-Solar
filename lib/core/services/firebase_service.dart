@@ -57,13 +57,21 @@ class FirebaseService {
     if (user == null) return;
 
     final userRef = _database.child('users').child(user.uid);
+    
+    // First, get existing user data to preserve farmName and location
+    final existingData = await getUserData(user.uid);
+    
     final userData = {
       'uid': user.uid,
       'email': user.email,
       'displayName': user.displayName,
       'photoUrl': user.photoURL,
       'lastSignIn': ServerValue.timestamp,
-      'createdAt': ServerValue.timestamp,
+      // Preserve existing profile data if it exists
+      'farmName': existingData?['farmName'] ?? user.displayName,
+      'location': existingData?['location'] ?? null,
+      'machineId': existingData?['machineId'] ?? 'ATS-${DateTime.now().millisecondsSinceEpoch % 1000}',
+      'createdAt': existingData?['createdAt'] ?? ServerValue.timestamp,
     };
 
     await userRef.update(userData);

@@ -99,41 +99,41 @@ class _ProfileViewState extends State<ProfileView> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  _ProfileCard(
-                    title: 'Security & Preferences',
-                    leading: Icons.shield_outlined,
-                    children: [
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.lock_outline),
-                        title: const Text('Change password'),
-                        subtitle: const Text('Update your password for better security'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _showChangePasswordDialog(context, viewModel),
-                      ),
-                      SwitchListTile.adaptive(
-                        contentPadding: EdgeInsets.zero,
-                        secondary: const Icon(Icons.sms_outlined),
-                        title: const Text('SMS alerts'),
-                        subtitle: const Text('Enable GSM fallback notifications'),
-                        value: _smsAlertsEnabled,
-                        onChanged: (value) {
-                          setState(() => _smsAlertsEnabled = value);
-                        },
-                      ),
-                      SwitchListTile.adaptive(
-                        contentPadding: EdgeInsets.zero,
-                        secondary: const Icon(Icons.notifications_active_outlined),
-                        title: const Text('Push notifications'),
-                        subtitle: const Text('Receive ESP32 status updates'),
-                        value: _pushAlertsEnabled,
-                        onChanged: (value) {
-                          setState(() => _pushAlertsEnabled = value);
-                        },
-                      ),
-                    ],
-                  ),
+                  // const SizedBox(height: 20),
+                  // _ProfileCard(
+                  //   title: 'Security & Preferences',
+                  //   leading: Icons.shield_outlined,
+                  //   children: [
+                  //     ListTile(
+                  //       contentPadding: EdgeInsets.zero,
+                  //       leading: const Icon(Icons.lock_outline),
+                  //       title: const Text('Change password'),
+                  //       subtitle: const Text('Update your password for better security'),
+                  //       trailing: const Icon(Icons.chevron_right),
+                  //       onTap: () => _showChangePasswordDialog(context, viewModel),
+                  //     ),
+                  //     SwitchListTile.adaptive(
+                  //       contentPadding: EdgeInsets.zero,
+                  //       secondary: const Icon(Icons.sms_outlined),
+                  //       title: const Text('SMS alerts'),
+                  //       subtitle: const Text('Enable GSM fallback notifications'),
+                  //       value: _smsAlertsEnabled,
+                  //       onChanged: (value) {
+                  //         setState(() => _smsAlertsEnabled = value);
+                  //       },
+                  //     ),
+                  //     SwitchListTile.adaptive(
+                  //       contentPadding: EdgeInsets.zero,
+                  //       secondary: const Icon(Icons.notifications_active_outlined),
+                  //       title: const Text('Push notifications'),
+                  //       subtitle: const Text('Receive ESP32 status updates'),
+                  //       value: _pushAlertsEnabled,
+                  //       onChanged: (value) {
+                  //         setState(() => _pushAlertsEnabled = value);
+                  //       },
+                  //     ),
+                  //   ],
+                  // ),
                   const SizedBox(height: 20),
                   if (viewModel.hasError)
                     Container(

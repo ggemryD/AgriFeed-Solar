@@ -615,7 +615,7 @@ class _ScheduleTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${schedule.weightKg.toStringAsFixed(1)} kg per cycle',
+                  '${schedule.weightKg.toStringAsFixed(1)} kg', //per cycle
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),

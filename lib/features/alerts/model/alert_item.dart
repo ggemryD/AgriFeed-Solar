@@ -1,4 +1,4 @@
-enum AlertType { feedLow, feedCompleted, powerSwitch, systemError, smsStatus }
+enum AlertType { feedLow, feedCompleted, powerSwitch, systemError, smsStatus, manualFeed, scheduledFeed }
 
 class AlertItem {
   const AlertItem({
@@ -9,6 +9,8 @@ class AlertItem {
     required this.timestamp,
     this.isRead = false,
     this.statusDetail,
+    this.feedWeight,
+    this.feedType,
   });
 
   final String id;
@@ -18,6 +20,8 @@ class AlertItem {
   final DateTime timestamp;
   final bool isRead;
   final String? statusDetail;
+  final double? feedWeight; // New: weight of feed dispensed
+  final String? feedType; // New: type of feeding (manual/scheduled)
 
   AlertItem copyWith({bool? isRead}) {
     return AlertItem(
@@ -28,6 +32,8 @@ class AlertItem {
       timestamp: timestamp,
       isRead: isRead ?? this.isRead,
       statusDetail: statusDetail,
+      feedWeight: feedWeight,
+      feedType: feedType,
     );
   }
 }

@@ -46,6 +46,8 @@ dependencies:
   google_sign_in: ^6.2.1
   flutter_local_notifications: ^17.2.3  # Latest stable version //need ni for push notification
 
+  flutter_launcher_icons: ^0.14.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -67,6 +69,17 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/icon/icon.png
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png" # Path to your icon
+  adaptive_icon_background: "#FFFFFF" # Background color for Android adaptive icon
+  adaptive_icon_foreground: "assets/icon/icon.png" # Optional for Android adaptive icons
+
 
   # To add assets to your application, add an assets section, like this:
   # assets:

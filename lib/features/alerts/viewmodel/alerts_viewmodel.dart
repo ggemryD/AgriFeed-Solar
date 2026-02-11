@@ -61,6 +61,25 @@ class AlertsViewModel extends ChangeNotifier {
     }
   }
 
+  // New: Create feeding log when dispense is triggered
+  Future<void> createFeedingLog({
+    required AlertType type,
+    required double weightKg,
+    required String feedType,
+  }) async {
+    try {
+      await _repository.createFeedingLog(
+        type: type,
+        weightKg: weightKg,
+        feedType: feedType,
+      );
+      _error = null;
+    } catch (err) {
+      _error = err;
+      notifyListeners();
+    }
+  }
+
   void _subscribeToUpdates() {
     // Already handled in _loadAlerts with stream subscription
   }

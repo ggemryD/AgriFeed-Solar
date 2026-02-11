@@ -32,6 +32,8 @@ class AlertsService {
             timestamp: normalized.timestamp,
             isRead: normalized.isRead,
             statusDetail: normalized.statusDetail,
+            feedWeight: normalized.feedWeight != null ? (normalized.feedWeight as num).toDouble() : null,
+            feedType: normalized.feedType,
           );
         }).toList()
           ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
@@ -64,6 +66,25 @@ class AlertsService {
     await _userNotificationsRef().push().set(alertData);
   }
 
+  // New: Create feeding log when dispense is triggered
+  Future<void> createFeedingLog({
+    required AlertType type,
+    required double weightKg,
+    required String feedType,
+  }) async {
+    final alertData = {
+      'type': _mapAlertTypeToString(type),
+      'title': type == AlertType.manualFeed ? 'Manual Feeding' : 'Scheduled Feeding',
+      'message': '${weightKg.toStringAsFixed(1)} kg of feed dispensed',
+      'timestamp': DateTime.now().toIso8601String(),
+      'isRead': false,
+      'feedWeight': weightKg,
+      'feedType': feedType,
+    };
+
+    await _userNotificationsRef().push().set(alertData);
+  }
+
   AlertType _mapStringToAlertType(String? type) {
     if (type == null) return AlertType.systemError;
     final normalized = type.replaceAll('-', '_').toUpperCase();
@@ -83,6 +104,12 @@ class AlertsService {
       case 'SMSSTATUS':
       case 'SMS_STATUS':
         return AlertType.smsStatus;
+      case 'MANUALFEED':
+      case 'MANUAL_FEED':
+        return AlertType.manualFeed;
+      case 'SCHEDULEDFEED':
+      case 'SCHEDULED_FEED':
+        return AlertType.scheduledFeed;
       default:
         return AlertType.systemError;
     }
@@ -98,6 +125,10 @@ class AlertsService {
         return 'powerSwitch';
       case AlertType.smsStatus:
         return 'smsStatus';
+      case AlertType.manualFeed:
+        return 'manualFeed';
+      case AlertType.scheduledFeed:
+        return 'scheduledFeed';
       case AlertType.systemError:
         return 'systemError';
     }
@@ -115,6 +146,8 @@ class AlertsService {
     final statusDetail = data['statusDetail']?.toString();
     final status = data['status']?.toString();
     final feedLevel = data['feedLevel'];
+    final feedWeight = data['feedWeight']; // New: feeding weight
+    final feedType = data['feedType']; // New: feeding type
 
     if (statusDetail != null && statusDetail.isNotEmpty) {
       statusParts.add(statusDetail);
@@ -133,6 +166,8 @@ class AlertsService {
       timestamp: timestamp,
       isRead: isRead,
       statusDetail: statusParts.isEmpty ? null : statusParts.join(' • '),
+      feedWeight: feedWeight, // Pass through feeding weight
+      feedType: feedType, // Pass through feeding type
     );
   }
 
@@ -181,6 +216,8 @@ class _NormalizedAlert {
     required this.timestamp,
     required this.isRead,
     this.statusDetail,
+    this.feedWeight,
+    this.feedType,
   });
 
   final AlertType type;
@@ -189,4 +226,6 @@ class _NormalizedAlert {
   final DateTime timestamp;
   final bool isRead;
   final String? statusDetail;
+  final dynamic feedWeight; // New: feeding weight from database
+  final String? feedType; // New: feeding type from database
 }

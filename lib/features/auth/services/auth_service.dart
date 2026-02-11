@@ -21,13 +21,16 @@ class AuthService {
       throw Exception('Failed to retrieve user after Google sign-in');
     }
 
+    // Fetch the actual user data from Firebase to get farmName, location, etc.
+    final userData = await _firebaseService.getUserData(user.uid);
+
     return UserModel(
       id: user.uid,
-      fullName: user.displayName ?? 'Google User',
+      fullName: userData?['displayName'] ?? user.displayName ?? 'Google User',
       email: user.email ?? '',
-      farmName: null,
-      location: null,
-      machineId: null,
+      farmName: userData?['farmName'],
+      location: userData?['location'],
+      machineId: userData?['machineId'],
       photoUrl: user.photoURL,
     );
   }
