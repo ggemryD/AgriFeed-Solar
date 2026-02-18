@@ -16,30 +16,58 @@ class AlertsService {
         .orderByChild('timestamp')
         .limitToLast(50);
 
-    return notificationsRef.onValue.map((event) {
-      if (event.snapshot.value != null) {
-        final Map<dynamic, dynamic> alerts =
-            Map<dynamic, dynamic>.from(event.snapshot.value as Map);
-        return alerts.entries.map((entry) {
-          final alertData = Map<String, dynamic>.from(entry.value as Map);
-          final normalized = _normalizeAlertData(alertData);
+    final user = _requireUser();
+    final scheduledFeedsRef = _firebaseService.databaseRef
+        .child('users')
+        .child(user.uid)
+        .child('feeding')
+        .child('scheduledFeeds');
 
-          return AlertItem(
-            id: entry.key?.toString() ?? '',
-            type: normalized.type,
-            title: normalized.title,
-            message: normalized.message,
-            timestamp: normalized.timestamp,
-            isRead: normalized.isRead,
-            statusDetail: normalized.statusDetail,
-            feedWeight: normalized.feedWeight != null ? (normalized.feedWeight as num).toDouble() : null,
-            feedType: normalized.feedType,
-          );
-        }).toList()
-          ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    late StreamController<List<AlertItem>> controller;
+    List<AlertItem> notifications = [];
+    List<AlertItem> scheduledLogs = [];
+    bool notifReady = false;
+    bool schedReady = false;
+
+    void emitCombinedIfReady() {
+      if (!notifReady || !schedReady) {
+        return;
       }
-      return <AlertItem>[];
-    });
+      final combined = <AlertItem>[
+        ...notifications,
+        ...scheduledLogs,
+      ]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      controller.add(combined);
+    }
+
+    controller = StreamController<List<AlertItem>>.broadcast(
+      onListen: () {
+        final notifSub = notificationsRef.onValue.listen(
+          (event) {
+            notifications = _parseNotificationSnapshot(event.snapshot);
+            notifReady = true;
+            emitCombinedIfReady();
+          },
+          onError: controller.addError,
+        );
+
+        final schedSub = scheduledFeedsRef.onValue.listen(
+          (event) {
+            scheduledLogs = _parseScheduledFeedsSnapshot(event.snapshot);
+            schedReady = true;
+            emitCombinedIfReady();
+          },
+          onError: controller.addError,
+        );
+
+        controller.onCancel = () async {
+          await notifSub.cancel();
+          await schedSub.cancel();
+        };
+      },
+    );
+
+    return controller.stream;
   }
 
   Future<void> markAsRead(String alertId) async {
@@ -66,16 +94,87 @@ class AlertsService {
     await _userNotificationsRef().push().set(alertData);
   }
 
+  List<AlertItem> _parseNotificationSnapshot(DataSnapshot snapshot) {
+    if (snapshot.value == null) {
+      return <AlertItem>[];
+    }
+
+    final Map<dynamic, dynamic> alerts =
+        Map<dynamic, dynamic>.from(snapshot.value as Map);
+
+    return alerts.entries.map((entry) {
+      final alertData = Map<String, dynamic>.from(entry.value as Map);
+      final normalized = _normalizeAlertData(alertData);
+
+      return AlertItem(
+        id: entry.key?.toString() ?? '',
+        type: normalized.type,
+        title: normalized.title,
+        message: normalized.message,
+        timestamp: normalized.timestamp,
+        isRead: normalized.isRead,
+        statusDetail: normalized.statusDetail,
+        feedWeight: normalized.feedWeight != null
+            ? (normalized.feedWeight as num).toDouble()
+            : null,
+        feedType: normalized.feedType,
+      );
+    }).toList();
+  }
+
+  List<AlertItem> _parseScheduledFeedsSnapshot(DataSnapshot snapshot) {
+    if (snapshot.value == null) {
+      return <AlertItem>[];
+    }
+
+    final Map<dynamic, dynamic> feeds =
+        Map<dynamic, dynamic>.from(snapshot.value as Map);
+
+    final items = feeds.entries.map((entry) {
+      final data = Map<String, dynamic>.from(entry.value as Map);
+      final weight = (data['weightKg'] as num?)?.toDouble() ??
+          (data['amount'] as num?)?.toDouble();
+      final timestamp = _parseTimestamp(data['timestamp']);
+      final status = data['status']?.toString();
+
+      String weightText = '--';
+      if (weight != null) {
+        final truncated = (weight * 10).floor() / 10.0;
+        weightText = truncated.toStringAsFixed(1);
+      }
+
+      final message = status != null && status.isNotEmpty
+          ? '$weightText kg • $status'
+          : '$weightText kg of feed dispensed';
+
+      return AlertItem(
+        id: entry.key?.toString() ?? '',
+        type: AlertType.scheduledFeed,
+        title: 'Scheduled Feeding',
+        message: message,
+        timestamp: timestamp,
+        isRead: false,
+        statusDetail: null,
+        feedWeight: weight,
+        feedType: 'Scheduled',
+      );
+    }).toList();
+
+    items.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return items;
+  }
+
   // New: Create feeding log when dispense is triggered
   Future<void> createFeedingLog({
     required AlertType type,
     required double weightKg,
     required String feedType,
   }) async {
+    final truncated = (weightKg * 10).floor() / 10.0;
     final alertData = {
       'type': _mapAlertTypeToString(type),
       'title': type == AlertType.manualFeed ? 'Manual Feeding' : 'Scheduled Feeding',
-      'message': '${weightKg.toStringAsFixed(1)} kg of feed dispensed',
+      'message': '${truncated.toStringAsFixed(1)} kg of feed dispensed',
       'timestamp': DateTime.now().toIso8601String(),
       'isRead': false,
       'feedWeight': weightKg,

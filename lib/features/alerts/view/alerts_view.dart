@@ -43,10 +43,7 @@ class _AlertsViewState extends State<AlertsView> {
               final alert = alerts[index - 1];
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: _AlertTile(
-                  alert: alert,
-                  onMarkedRead: () => viewModel.markAsRead(alert.id),
-                ),
+                child: _AlertTile(alert: alert),
               );
             },
           ),
@@ -122,10 +119,9 @@ class _AlertsViewState extends State<AlertsView> {
 }
 
 class _AlertTile extends StatelessWidget {
-  const _AlertTile({required this.alert, required this.onMarkedRead});
+  const _AlertTile({required this.alert});
 
   final AlertItem alert;
-  final VoidCallback onMarkedRead;
 
   @override
   Widget build(BuildContext context) {
@@ -134,132 +130,118 @@ class _AlertTile extends StatelessWidget {
     final isUnread = !alert.isRead;
     final isFeedingLog = alert.type == AlertType.manualFeed || alert.type == AlertType.scheduledFeed;
 
-    return Dismissible(
-      key: ValueKey(alert.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        decoration: BoxDecoration(
-          color: colorScheme.primary,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: const Icon(Icons.check_circle, color: Colors.white),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color:
+            isUnread
+                ? colorScheme.primary.withValues(alpha: 0.08)
+                : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      onDismissed: (_) => onMarkedRead(),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color:
-              isUnread
-                  ? colorScheme.primary.withValues(alpha: 0.08)
-                  : Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12.withValues(alpha: 0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                _AlertIcon(type: alert.type),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        alert.title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _AlertIcon(type: alert.type),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      alert.title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
-                      Text(
-                        DateFormat('MMM d • hh:mm a').format(alert.timestamp),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    ),
+                    Text(
+                      DateFormat('MMM d • hh:mm a').format(alert.timestamp),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+              if (isUnread)
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary,
+                    shape: BoxShape.circle,
                   ),
                 ),
-                if (isUnread)
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Show feeding weight and type for feeding logs
+          if (isFeedingLog && (alert.feedWeight != null || alert.feedType != null)) ...[
+            Row(
+              children: [
+                Icon(
+                  Icons.scale_outlined,
+                  size: 16,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 6),
+                if (alert.feedWeight != null)
+                  Text(
+                    '${((alert.feedWeight! * 10).floor() / 10.0).toStringAsFixed(1)} kg',
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       color: colorScheme.primary,
-                      shape: BoxShape.circle,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                if (alert.feedWeight != null && alert.feedType != null)
+                  const SizedBox(width: 8),
+                if (alert.feedType != null)
+                  Chip(
+                    label: Text(alert.feedType!),
+                    backgroundColor: colorScheme.primary.withValues(alpha: 0.12),
+                    labelStyle: TextStyle(
+                      color: colorScheme.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 12),
-            // Show feeding weight and type for feeding logs
-            if (isFeedingLog && (alert.feedWeight != null || alert.feedType != null)) ...[
-              Row(
-                children: [
-                  Icon(
-                    Icons.scale_outlined,
-                    size: 16,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: 6),
-                  if (alert.feedWeight != null)
-                    Text(
-                      '${alert.feedWeight!.toStringAsFixed(1)} kg',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  if (alert.feedWeight != null && alert.feedType != null)
-                    const SizedBox(width: 8),
-                  if (alert.feedType != null)
-                    Chip(
-                      label: Text(alert.feedType!),
-                      backgroundColor: colorScheme.primary.withValues(alpha: 0.12),
-                      labelStyle: TextStyle(
-                        color: colorScheme.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
-            Text(alert.message, style: theme.textTheme.bodyMedium),
-            if (alert.statusDetail != null) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Icon(
-                    Icons.sms_outlined,
-                    size: 18,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      alert.statusDetail!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            const SizedBox(height: 8),
           ],
-        ),
+          Text(alert.message, style: theme.textTheme.bodyMedium),
+          if (alert.statusDetail != null) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(
+                  Icons.sms_outlined,
+                  size: 18,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    alert.statusDetail!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
