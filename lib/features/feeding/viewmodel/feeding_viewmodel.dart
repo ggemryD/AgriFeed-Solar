@@ -16,7 +16,7 @@ class FeedingViewModel extends ChangeNotifier {
   final AlertsViewModel? _alertsViewModel; // Optional alerts viewmodel
 
   List<FeedingScheduleModel> _schedules = [];
-  double _manualQuantity = 2.0;
+  double _manualQuantity = 0.5;
   bool _isLoading = false;
   bool _isDispensing = false;
   double? _loadCellKg;

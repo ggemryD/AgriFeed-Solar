@@ -125,9 +125,9 @@ class _ManualFeedCard extends StatelessWidget {
             const SizedBox(height: 12),
             Slider(
               value: viewModel.manualQuantity,
-              min: 1,
-              max: 5,
-              divisions: 40,
+              min: 0.1,
+              max: 5.0,
+              divisions: 49,
               label: '${viewModel.manualQuantity.toStringAsFixed(1)} kg',
               onChanged:
                   viewModel.isDispensing
@@ -136,7 +136,7 @@ class _ManualFeedCard extends StatelessWidget {
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [Text('1 kg'), Text('5 kg')],
+              children: const [Text('0.1 kg'), Text('5 kg')],
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
@@ -297,11 +297,12 @@ class _ScheduleSection extends StatelessWidget {
     FeedingScheduleModel schedule,
   ) async {
     final viewModel = context.read<FeedingViewModel>();
-    final weightOptions = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0];
-    var selectedWeight = weightOptions.firstWhere(
-      (w) => (w - schedule.weightKg).abs() < 0.1,
-      orElse: () => 2.5,
-    );
+    final weightOptions = List<double>.generate(50, (index) => (index + 1) / 10.0);
+    var selectedWeight = schedule.weightKg;
+    // Ensure selectedWeight is one of the options (round to nearest 0.1)
+    selectedWeight = (selectedWeight * 10).round() / 10.0;
+    if (selectedWeight < 0.1) selectedWeight = 0.1;
+    if (selectedWeight > 5.0) selectedWeight = 5.0;
 
     await showDialog<void>(
       context: context,
@@ -316,23 +317,29 @@ class _ScheduleSection extends StatelessWidget {
                 children: [
                   const Text('Select feed weight:'),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: weightOptions.map((weight) {
-                      final isSelected = weight == selectedWeight;
-                      return FilterChip(
-                        label: Text('${weight.toStringAsFixed(1)} kg'),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() => selectedWeight = weight);
-                          }
-                        },
-                        backgroundColor: Colors.grey[200],
-                        selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                      );
-                    }).toList(),
+                  SizedBox(
+                    height: 200,
+                    width: double.maxFinite,
+                    child: SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: weightOptions.map((weight) {
+                          final isSelected = (weight - selectedWeight).abs() < 0.05;
+                          return FilterChip(
+                            label: Text('${weight.toStringAsFixed(1)} kg'),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() => selectedWeight = weight);
+                              }
+                            },
+                            backgroundColor: Colors.grey[200],
+                            selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                          );
+                        }).toList(),
+                      ),
+                    ),
                   ),
                 ],
               );
@@ -360,10 +367,10 @@ class _ScheduleSection extends StatelessWidget {
     final viewModel = context.read<FeedingViewModel>();
     const hourOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     final minuteOptions = List<int>.generate(12, (index) => index * 5);
-    final weightOptions = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0];
+    final weightOptions = List<double>.generate(50, (index) => (index + 1) / 10.0);
     var selectedHour = 7;
     var selectedMinute = 0;
-    var selectedWeight = 2.5;
+    var selectedWeight = 0.5;
     var period = 'AM';
     var isEnabled = true;
     final formKey = GlobalKey<FormState>();
@@ -448,23 +455,28 @@ class _ScheduleSection extends StatelessWidget {
                           const SizedBox(height: 20),
                           const Text('Select feed weight:'),
                           const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: weightOptions.map((weight) {
-                              final isSelected = weight == selectedWeight;
-                              return FilterChip(
-                                label: Text('${weight.toStringAsFixed(1)} kg'),
-                                selected: isSelected,
-                                onSelected: (selected) {
-                                  if (selected) {
-                                    setState(() => selectedWeight = weight);
-                                  }
-                                },
-                                backgroundColor: Colors.grey[200],
-                                selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                              );
-                            }).toList(),
+                          SizedBox(
+                            height: 200,
+                            child: SingleChildScrollView(
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: weightOptions.map((weight) {
+                                  final isSelected = (weight - selectedWeight).abs() < 0.05;
+                                  return FilterChip(
+                                    label: Text('${weight.toStringAsFixed(1)} kg'),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      if (selected) {
+                                        setState(() => selectedWeight = weight);
+                                      }
+                                    },
+                                    backgroundColor: Colors.grey[200],
+                                    selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 16),
                           SwitchListTile(
