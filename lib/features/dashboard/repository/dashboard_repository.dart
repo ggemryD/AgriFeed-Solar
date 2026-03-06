@@ -30,7 +30,7 @@ class DashboardRepository {
       }
 
       // 1. Try to get times from Firebase storageData first
-      DateTime? lastFeeding = storageData['lastFeedingTime'] != null
+      DateTime? lastFeedingFromDevice = storageData['lastFeedingTime'] != null
           ? DateTime.tryParse(storageData['lastFeedingTime'].toString())
           : null;
           
@@ -38,25 +38,34 @@ class DashboardRepository {
           ? DateTime.tryParse(storageData['nextFeedingTime'].toString())
           : null;
 
-      // 2. Fallback: Fetch from AlertsRepository (History) if missing
-      if (lastFeeding == null) {
-        try {
-          final alertsStream = alertsRepository.getAlerts();
-          await for (final alerts in alertsStream) {
-            final feedingLogs = alerts.where((a) => 
-              a.type == AlertType.manualFeed || 
-              a.type == AlertType.scheduledFeed
-            ).toList();
-            
-            if (feedingLogs.isNotEmpty) {
-              feedingLogs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-              lastFeeding = feedingLogs.first.timestamp;
-            }
-            break; // Get one snapshot
+      // 2. Also fetch latest feeding time from Alerts (manual + scheduled)
+      DateTime? lastFeedingFromAlerts;
+      try {
+        final alertsStream = alertsRepository.getAlerts();
+        await for (final alerts in alertsStream) {
+          final feedingLogs = alerts.where((a) => 
+            a.type == AlertType.manualFeed || 
+            a.type == AlertType.scheduledFeed
+          ).toList();
+          
+          if (feedingLogs.isNotEmpty) {
+            feedingLogs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+            lastFeedingFromAlerts = feedingLogs.first.timestamp;
           }
-        } catch (e) {
-          print('Error fetching last feeding from alerts: $e');
+          break; // Get one snapshot
         }
+      } catch (e) {
+        print('Error fetching last feeding from alerts: $e');
+      }
+
+      // 2b. Decide final lastFeeding using the most recent between device and alerts
+      DateTime? lastFeeding;
+      if (lastFeedingFromDevice != null && lastFeedingFromAlerts != null) {
+        lastFeeding = lastFeedingFromDevice.isAfter(lastFeedingFromAlerts)
+            ? lastFeedingFromDevice
+            : lastFeedingFromAlerts;
+      } else {
+        lastFeeding = lastFeedingFromDevice ?? lastFeedingFromAlerts;
       }
 
       // 3. Fallback: Calculate from FeedingRepository (Schedules) if missing
